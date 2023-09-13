@@ -42,20 +42,28 @@ const fetchStatuses = {
   rejected: "rejected",
   resolved: "resolved",
 };
+const controller = ref(null);
 
 async function fetchData() {
   try {
+    if (fetchStatus.value === fetchStatuses.pending) {
+      controller.value.abort();
+    }
+    controller.value = new AbortController();
+    const signal = controller.value.signal;
     fetchStatus.value = fetchStatuses.pending;
+
     const response = await fetch(
-      `http://localhost:3001/api?email=${formData.value.email}&number=${formData.value.number}`
+      `http://localhost:3001/api?email=${formData.value.email}&number=${formData.value.number}`,
+      { signal }
     );
     users.value = await response.json();
 
     if (users.value.length) formData.value = { number: "", email: "" };
     fetchStatus.value = fetchStatuses.resolved;
   } catch (e) {
-    fetchStatus.value = fetchStatuses.rejected;
-    console.log(e);
+    if (e.name === "AbortError") fetchStatus.value = fetchStatuses.pending;
+    else fetchStatus.value = fetchStatuses.rejected;
   }
 }
 </script>
